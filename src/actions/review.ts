@@ -22,8 +22,10 @@ import {
   type Decision,
   type Experiment,
   type TrackedLink,
+  type Signal,
   type Verdict,
 } from '../schemas/launchlab-schemas'
+import { githubDelta, repoSubject, snapshotGithub } from '../server/signals'
 import { channelLabel } from '../lib/channels'
 import {
   applyGuardrail,
@@ -67,7 +69,12 @@ export interface Evidence {
 }
 
 /** Everything the model sees is built here, from stored records only. */
-export function buildEvidence(exp: Experiment, links: TrackedLink[], clicks: Click[]) {
+export function buildEvidence(
+  exp: Experiment,
+  links: TrackedLink[],
+  clicks: Click[],
+  signals: Signal[] = [],
+) {
   const human = clicks.filter(isUniqueHuman)
   const evidence: Evidence = {
     clicks: clicks.length,
@@ -94,6 +101,17 @@ export function buildEvidence(exp: Experiment, links: TrackedLink[], clicks: Cli
     bots: clicks.filter((c) => c.isBot).length,
     repeats: clicks.filter((c) => !c.isBot && c.isRepeat).length,
     perLink,
+  }
+  const gh = githubDelta(signals, repoSubject(exp.githubRepo))
+  if (gh) {
+    measured.github = {
+      subject: gh.subject,
+      stars: gh.stars,
+      forks: gh.forks,
+      starsNow: gh.last.metrics.stars,
+      forksNow: gh.last.metrics.forks,
+      snapshots: gh.snapshots,
+    }
   }
   return { evidence, measured, facts: measuredFacts(measured) }
 }
@@ -141,6 +159,7 @@ function buildUserPrompt(exp: Experiment, ev: ReturnType<typeof buildEvidence>):
         sourceUnknown: ev.measured.unknownSource,
         excluded: { bots: ev.measured.bots, repeats: ev.measured.repeats },
         perLink: ev.measured.perLink,
+        github: ev.measured.github ?? '(not tracked)',
       },
       teamNotes: exp.notes || '(none)',
     },
@@ -206,7 +225,8 @@ export const reviewExperiment: ActionHandler<Env> = async ({ userId, params, too
 
   const links = (await queryAll<TrackedLink>(tools, 'links', { experimentId })).map((r) => r.data)
   const clicks = (await queryAll<Click>(tools, 'clicks', { experimentId })).map((r) => r.data)
-  const ev = buildEvidence(exp.data, links, clicks)
+  const signals = (await queryAll<Signal>(tools, 'signals', { experimentId })).map((r) => r.data)
+  const ev = buildEvidence(exp.data, links, clicks, signals)
 
   const ai: ActionResult<unknown> = await tools.integration('anthropic/chat-completion', {
     model: REVIEW_MODEL,
@@ -260,4 +280,28 @@ export const approveVerdict: ActionHandler<Env> = async ({ userId, params, tools
     approved: approve,
     approvedBy: approve ? userId : '',
   })
+}
+
+/** Manual refresh of external signals. Owner/admin only, 5-minute cooldown. */
+const REFRESH_COOLDOWN_S = 5 * 60
+
+export const refreshSignals: ActionHandler<Env> = async ({ userId, params, tools, env }) => {
+  const experimentId = typeof params.experimentId === 'string' ? params.experimentId : ''
+  if (!experimentId) return { success: false, error: 'experimentId is required' }
+  const exp = await getRecord<Experiment>(tools, 'experiments', experimentId)
+  if (!exp) return { success: false, error: 'Experiment not found' }
+  if (exp.createdBy !== userId && !(await isAdmin(env, userId))) {
+    return { success: false, error: 'Only the experiment owner or an admin can refresh signals' }
+  }
+  const existing = await queryAll<Signal>(tools, 'signals', { experimentId })
+  const subject = repoSubject(exp.data.githubRepo)
+  const last = existing
+    .filter((r) => r.data.subject === subject)
+    .reduce((m, r) => Math.max(m, r.data.at || 0), 0)
+  if (Date.now() / 1000 - last < REFRESH_COOLDOWN_S) {
+    return { success: false, error: 'Refreshed less than 5 minutes ago' }
+  }
+  const r = await snapshotGithub(tools, experimentId, exp.data)
+  if (!r.ok) return { success: false, error: r.error }
+  return { success: true, data: { metrics: r.signal.metrics } }
 }

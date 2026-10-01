@@ -6,7 +6,7 @@ import { Button, useToast } from '@/components/ui'
 import type { Verdict } from '../schemas/launchlab-schemas'
 import { DecisionBadge } from './launchlab'
 
-async function callAction<T>(name: string, params: Record<string, unknown>): Promise<T> {
+export async function callAction<T>(name: string, params: Record<string, unknown>): Promise<T> {
   const res = await fetch(`/api/actions/${name}`, {
     method: 'POST',
     headers: {

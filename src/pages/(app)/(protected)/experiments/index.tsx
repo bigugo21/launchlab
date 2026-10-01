@@ -23,6 +23,7 @@ const EMPTY_FORM = {
   successMetric: '',
   targetClicks: '50',
   destinationUrl: 'https://deep.space',
+  githubRepo: '',
 }
 
 export default function ExperimentsPage() {
@@ -122,6 +123,7 @@ function NewExperimentForm({ onDone }: { onDone: () => void }) {
         status: 'draft',
         signups: 0,
         notes: '',
+        githubRepo: form.githubRepo.trim(),
       })
       onDone()
       navigate(`/experiments/${id}`)
@@ -194,6 +196,13 @@ function NewExperimentForm({ onDone }: { onDone: () => void }) {
           required
           value={form.destinationUrl}
           onChange={(e) => set('destinationUrl')(e.target.value)}
+        />
+      </Field>
+      <Field label="GitHub repo to move (optional)" className="sm:col-span-2">
+        <Input
+          value={form.githubRepo}
+          onChange={(e) => set('githubRepo')(e.target.value)}
+          placeholder="deepdotspace/storynest — tracks stars and forks while it runs"
         />
       </Field>
       <div className="flex justify-end gap-2 sm:col-span-2">

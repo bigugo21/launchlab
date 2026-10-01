@@ -16,6 +16,7 @@ import {
 } from '../../../../schemas/launchlab-schemas'
 import { StatusBadge, ViewingNow, channelLabel, makeCode } from '../../../../components/launchlab'
 import { ReviewPanel } from '../../../../components/verdicts'
+import { AttentionPanel } from '../../../../components/signals'
 
 export default function ExperimentPage() {
   const { id = '' } = useParams()
@@ -84,6 +85,8 @@ export default function ExperimentPage() {
       </section>
 
       <LinksPanel experimentId={id} links={links} clicks={clicks} canEdit={canEdit} />
+
+      <AttentionPanel experimentId={id} exp={exp} canEdit={canEdit} />
 
       <ReviewPanel experimentId={id} canReview={canEdit} isAdmin={user?.role === 'admin'} />
 

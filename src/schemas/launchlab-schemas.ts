@@ -50,6 +50,19 @@ export interface Experiment {
   signups: number
   /** Learnings the team noted while it ran (free text, fed to the AI review). */
   notes: string
+  /** Optional "owner/repo" whose stars/forks this experiment is trying to move. */
+  githubRepo?: string
+}
+
+/** A point-in-time reading of an external attention metric. Worker-written. */
+export interface Signal {
+  experimentId: string
+  source: 'github'
+  /** e.g. "deepdotspace/storynest" */
+  subject: string
+  /** Unix seconds. */
+  at: number
+  metrics: { stars: number; forks: number; watchers: number; openIssues: number }
 }
 
 export interface TrackedLink {
@@ -126,8 +139,21 @@ export const experimentsSchema: CollectionSchema = {
     },
     { name: 'signups', storage: 'number', interpretation: 'plain' },
     { name: 'notes', storage: 'text', interpretation: 'plain' },
+    { name: 'githubRepo', storage: 'text', interpretation: 'plain' },
   ],
   permissions: memberLedger,
+}
+
+export const signalsSchema: CollectionSchema = {
+  name: 'signals',
+  columns: [
+    { name: 'experimentId', storage: 'text', interpretation: 'plain' },
+    { name: 'source', storage: 'text', interpretation: { kind: 'select', options: ['github'] } },
+    { name: 'subject', storage: 'text', interpretation: 'plain' },
+    { name: 'at', storage: 'number', interpretation: 'plain' },
+    { name: 'metrics', storage: 'text', interpretation: { kind: 'json' } },
+  ],
+  permissions: serverWritten,
 }
 
 export const linksSchema: CollectionSchema = {

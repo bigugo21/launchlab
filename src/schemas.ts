@@ -14,6 +14,7 @@ import {
   clicksSchema,
   experimentsSchema,
   linksSchema,
+  signalsSchema,
   verdictsSchema,
 } from './schemas/launchlab-schemas'
 
@@ -24,4 +25,5 @@ export const schemas: CollectionSchema[] = [
   linksSchema,
   clicksSchema,
   verdictsSchema,
+  signalsSchema,
 ]

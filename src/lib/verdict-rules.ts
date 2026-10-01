@@ -37,6 +37,8 @@ export interface MeasuredInputs extends SampleFacts {
   bots: number
   repeats: number
   perLink: { label: string; uniqueHumans: number }[]
+  /** Change in a tracked GitHub repo between the first and latest snapshot. */
+  github?: { subject: string; stars: number; forks: number; starsNow: number; forksNow: number; snapshots: number }
 }
 
 const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0)
@@ -64,6 +66,15 @@ export function measuredFacts(m: MeasuredInputs): string[] {
   }
   if (m.bots + m.repeats > 0) {
     facts.push(`Excluded: ${plural(m.bots, 'bot/preview request')} and ${plural(m.repeats, 'repeat visit')}.`)
+  }
+  if (m.github) {
+    const g = m.github
+    const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
+    facts.push(
+      g.snapshots > 1
+        ? `GitHub ${g.subject}: ${sign(g.stars)} stars and ${sign(g.forks)} forks since the first snapshot (now ${g.starsNow} stars, ${g.forksNow} forks).`
+        : `GitHub ${g.subject}: one snapshot so far (${g.starsNow} stars, ${g.forksNow} forks) — no change measured yet.`,
+    )
   }
   if (m.perLink.length > 1) {
     facts.push(`By link: ${m.perLink.map((l) => `${l.label} ${l.uniqueHumans}`).join(' · ')}.`)
