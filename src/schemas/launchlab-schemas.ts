@@ -78,7 +78,13 @@ export function isUniqueHuman(c: Click): boolean {
 
 export interface Verdict {
   experimentId: string
+  /** Final decision after the code guardrail. */
   decision: Decision
+  /** What the model proposed, kept for audit. */
+  aiDecision?: Decision
+  /** Why the guardrail changed the model's decision ('' when it didn't). */
+  guardrailNote?: string
+  /** Measured facts, computed by the worker from stored clicks (not AI). */
   proven: string[]
   assumed: string[]
   nextTest: string
@@ -156,6 +162,8 @@ export const verdictsSchema: CollectionSchema = {
   columns: [
     { name: 'experimentId', storage: 'text', interpretation: 'plain' },
     { name: 'decision', storage: 'text', interpretation: { kind: 'select', options: [...DECISIONS] } },
+    { name: 'aiDecision', storage: 'text', interpretation: { kind: 'select', options: [...DECISIONS] } },
+    { name: 'guardrailNote', storage: 'text', interpretation: 'plain' },
     { name: 'proven', storage: 'text', interpretation: { kind: 'json' } },
     { name: 'assumed', storage: 'text', interpretation: { kind: 'json' } },
     { name: 'nextTest', storage: 'text', interpretation: 'plain' },

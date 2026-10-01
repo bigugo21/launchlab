@@ -2,24 +2,9 @@
 
 import { getUserColor, usePresenceRoom } from 'deepspace'
 import { cn } from '@/lib/utils'
-import type { Channel, Decision, ExperimentStatus } from '../schemas/launchlab-schemas'
+import type { Decision, ExperimentStatus } from '../schemas/launchlab-schemas'
 
-const CHANNEL_LABELS: Record<Channel, string> = {
-  reddit: 'Reddit',
-  'hacker-news': 'Hacker News',
-  x: 'X',
-  linkedin: 'LinkedIn',
-  discord: 'Discord',
-  creator: 'Creator',
-  newsletter: 'Newsletter',
-  outbound: 'Outbound',
-  event: 'Event',
-  other: 'Other',
-}
-
-export function channelLabel(c: Channel | undefined): string {
-  return c ? (CHANNEL_LABELS[c] ?? c) : '—'
-}
+export { channelLabel } from '../lib/channels'
 
 const STATUS_STYLES: Record<ExperimentStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
