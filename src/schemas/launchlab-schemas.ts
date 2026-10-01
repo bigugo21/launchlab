@@ -52,6 +52,8 @@ export interface Experiment {
   notes: string
   /** Optional "owner/repo" whose stars/forks this experiment is trying to move. */
   githubRepo?: string
+  /** Unix seconds when the "target reached" email went out (0/absent = not yet). */
+  barNotifiedAt?: number
 }
 
 /** A point-in-time reading of an external attention metric. Worker-written. */
@@ -140,6 +142,7 @@ export const experimentsSchema: CollectionSchema = {
     { name: 'signups', storage: 'number', interpretation: 'plain' },
     { name: 'notes', storage: 'text', interpretation: 'plain' },
     { name: 'githubRepo', storage: 'text', interpretation: 'plain' },
+    { name: 'barNotifiedAt', storage: 'number', interpretation: 'plain' },
   ],
   permissions: memberLedger,
 }

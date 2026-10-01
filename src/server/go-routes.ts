@@ -19,7 +19,12 @@ import type { Hono } from 'hono'
 import { getCookie, setCookie } from 'hono/cookie'
 import type { AppContext } from '../../worker.js'
 import { createActionTools } from './action-routes.js'
-import type { Experiment, TrackedLink } from '../schemas/launchlab-schemas.js'
+import { appUrl, oneLine, sendEmail, userEmail } from './notify.js'
+import type { ActionTools } from 'deepspace/worker'
+import type { Env } from '../../worker.js'
+import { isUniqueHuman, type Click, type Experiment, type TrackedLink } from '../schemas/launchlab-schemas.js'
+
+type ExperimentRecord = { data: Experiment; createdBy: string }
 
 const CODE_RE = /^[a-z0-9]{4,16}$/
 
@@ -81,7 +86,7 @@ export function registerGoRoutes(app: Hono<AppContext>): void {
 
     const expRes = await tools.get('experiments', link.data.experimentId)
     const exp = expRes.success
-      ? (expRes.data.record as unknown as { data: Experiment } | undefined)
+      ? (expRes.data.record as unknown as ExperimentRecord | undefined)
       : undefined
     const target = exp ? withUtm(exp.data.destinationUrl, exp.data.channel, code) : null
     if (!target) return c.text('Link has no valid destination', 404)
@@ -115,12 +120,58 @@ export function registerGoRoutes(app: Hono<AppContext>): void {
           isBot,
           isRepeat,
         })
-        .then((r) => {
-          if (!r.success) console.error(`[go] click write failed code=${code}: ${r.error}`)
+        .then(async (r) => {
+          if (!r.success) {
+            console.error(`[go] click write failed code=${code}: ${r.error}`)
+            return
+          }
+          if (!isBot && !isRepeat && exp) {
+            await notifyIfBarReached(tools, c.env, link.data.experimentId, exp)
+          }
         }),
     )
 
     // 302, not 301: a cached permanent redirect would skip us on repeat clicks.
     return c.redirect(target, 302)
   })
+}
+
+/**
+ * Email the experiment's owner once, the first time unique human clicks reach
+ * the pass bar. `barNotifiedAt` is set before sending so a retry never sends
+ * twice; two clicks landing in the same instant could still both pass the
+ * check — an accepted, rare duplicate for a notification.
+ */
+async function notifyIfBarReached(
+  tools: ActionTools,
+  env: Env,
+  experimentId: string,
+  exp: ExperimentRecord,
+): Promise<void> {
+  const target = exp.data.targetClicks || 0
+  if (target <= 0 || exp.data.barNotifiedAt) return
+  const res = await tools.query('clicks', { where: { experimentId }, limit: 5000 })
+  if (!res.success) return
+  const unique = (res.data.records as unknown as { data: Click }[]).filter((r) => isUniqueHuman(r.data)).length
+  if (unique < target) return
+
+  const marked = await tools.update('experiments', experimentId, { barNotifiedAt: Math.floor(Date.now() / 1000) })
+  if (!marked.success) return
+  const to = await userEmail(tools, exp.createdBy)
+  if (!to) return
+  const title = oneLine(exp.data.title)
+  await sendEmail(
+    tools,
+    to,
+    `Target reached: ${title}`,
+    [
+      `Your experiment "${title}" just reached ${unique} unique human clicks — its pass bar was ${target}.`,
+      '',
+      'Now is a good time to record signups, add notes, and run the AI review so the team can decide whether to expand.',
+      '',
+      appUrl(env, `/experiments/${experimentId}`),
+      '',
+      '— Launch Lab',
+    ].join('\n'),
+  )
 }

@@ -26,6 +26,7 @@ import {
   type Verdict,
 } from '../schemas/launchlab-schemas'
 import { githubDelta, repoSubject, snapshotGithub } from '../server/signals'
+import { appUrl, oneLine, sendEmail, userEmail } from '../server/notify'
 import { channelLabel } from '../lib/channels'
 import {
   applyGuardrail,
@@ -265,6 +266,29 @@ export const reviewExperiment: ActionHandler<Env> = async ({ userId, params, too
   const created = await tools.create('verdicts', { ...verdict })
   if (!created.success) return created
   console.info(`[review] verdict=${created.data.recordId} exp=${experimentId} by=${userId}`)
+
+  // Tell the app owner a verdict is waiting — unless they ran it themselves.
+  if (env.OWNER_USER_ID && env.OWNER_USER_ID !== userId) {
+    const to = await userEmail(tools, env.OWNER_USER_ID)
+    if (to) {
+      const title = oneLine(exp.data.title)
+      await sendEmail(
+        tools,
+        to,
+        `Verdict to approve: ${guard.decision.toUpperCase()} — ${title}`,
+        [
+          `A new AI verdict for "${title}" is waiting for your approval.`,
+          '',
+          `Decision: ${guard.decision.toUpperCase()}${guard.note ? ' (adjusted by the data rule)' : ''}`,
+          ...ev.facts.map((f) => `- ${f}`),
+          '',
+          appUrl(env, `/experiments/${experimentId}`),
+          '',
+          '— Launch Lab',
+        ].join('\n'),
+      )
+    }
+  }
   return { success: true, data: { verdictId: created.data.recordId } }
 }
 
