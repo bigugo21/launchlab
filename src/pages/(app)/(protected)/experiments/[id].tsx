@@ -1,6 +1,6 @@
 /**
  * One experiment: the bet, its tracked links, live click counts, and the
- * owner's controls (status, signups, notes).
+ * measured funnel, and the owner's controls (status, notes).
  */
 
 import { useState } from 'react'
@@ -10,6 +10,7 @@ import { Button, Input, Textarea, useToast } from '@/components/ui'
 import {
   EXPERIMENT_STATUSES,
   type Click,
+  type Conversion,
   type Experiment,
   type TrackedLink,
   isUniqueHuman,
@@ -17,6 +18,7 @@ import {
 import { StatusBadge, ViewingNow, channelLabel, makeCode } from '../../../../components/launchlab'
 import { ReviewPanel } from '../../../../components/verdicts'
 import { AttentionPanel } from '../../../../components/signals'
+import { FunnelPanel } from '../../../../components/conversions'
 
 export default function ExperimentPage() {
   const { id = '' } = useParams()
@@ -27,6 +29,7 @@ export default function ExperimentPage() {
   })
   const { records: links } = useQuery<TrackedLink>('links', { where: { experimentId: id } })
   const { records: clicks } = useQuery<Click>('clicks', { where: { experimentId: id } })
+  const { records: conversions } = useQuery<Conversion>('conversions', { where: { experimentId: id } })
 
   const exp = experiments[0]
   if (status === 'loading') return <p className="p-8 text-sm text-muted-foreground">Loading…</p>
@@ -43,6 +46,7 @@ export default function ExperimentPage() {
   const bots = clicks.filter((c) => c.data.isBot).length
   const repeats = clicks.filter((c) => !c.data.isBot && c.data.isRepeat).length
   const target = exp.data.targetClicks || 0
+  const signups = conversions.filter((c) => c.data.event === 'signup').length
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -71,11 +75,8 @@ export default function ExperimentPage() {
           hint={`${bots} bot${bots === 1 ? '' : 's'} · ${repeats} repeat${repeats === 1 ? '' : 's'}`}
           testId="stat-not-counted"
         />
-        <Stat label="Signups (reported)" value={exp.data.signups ?? 0} />
-        <Stat
-          label="Click → signup"
-          value={human.length ? `${Math.round(((exp.data.signups ?? 0) / human.length) * 100)}%` : '—'}
-        />
+        <Stat label="Signups (measured)" value={signups} testId="stat-signups" />
+        <Stat label="Click → signup" value={human.length ? `${Math.round((signups / human.length) * 100)}%` : '—'} />
       </section>
 
       <section className="mt-6 grid gap-4 rounded-lg border border-border bg-card p-5 sm:grid-cols-2">
@@ -85,6 +86,14 @@ export default function ExperimentPage() {
       </section>
 
       <LinksPanel experimentId={id} links={links} clicks={clicks} canEdit={canEdit} />
+
+      <FunnelPanel
+        experimentId={id}
+        uniqueHumans={human.length}
+        conversions={conversions.map((c) => c.data)}
+        canEdit={canEdit}
+        linkCode={links[0]?.data.code}
+      />
 
       <AttentionPanel experimentId={id} exp={exp} canEdit={canEdit} />
 
@@ -214,7 +223,6 @@ function RecentClicks({
 
 function OwnerControls({ exp, recordId }: { exp: Experiment; recordId: string }) {
   const { put, ready } = useMutations<Experiment>('experiments')
-  const [signups, setSignups] = useState(String(exp.signups ?? 0))
   const [notes, setNotes] = useState(exp.notes ?? '')
 
   return (
@@ -234,25 +242,6 @@ function OwnerControls({ exp, recordId }: { exp: Experiment; recordId: string })
               {s}
             </Button>
           ))}
-        </div>
-      </div>
-      <div>
-        <div className="mb-1.5 text-xs font-medium text-muted-foreground">Signups attributed</div>
-        <div className="flex gap-2">
-          <Input
-            type="number"
-            min={0}
-            value={signups}
-            onChange={(e) => setSignups(e.target.value)}
-            className="h-8"
-          />
-          <Button
-            size="sm"
-            disabled={!ready}
-            onClick={() => put(recordId, { signups: Math.max(0, Number(signups) || 0) })}
-          >
-            Save
-          </Button>
         </div>
       </div>
       <div className="sm:col-span-3">

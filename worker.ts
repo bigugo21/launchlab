@@ -34,6 +34,7 @@ import {
 } from './src/server/http-routes.js'
 import { registerRealtimeRoutes } from './src/server/realtime-routes.js'
 import { registerGoRoutes } from './src/server/go-routes.js'
+import { registerConvertRoutes } from './src/server/convert-routes.js'
 
 // Dynamic deploy reads this manifest to create the app's DO bindings.
 export const __DO_MANIFEST__ = [
@@ -146,6 +147,7 @@ if (schemas.some((schema) => schema.name === AI_CHATS_SCHEMA.name)) {
 }
 registerPlatformProxyRoutes(app)
 registerGoRoutes(app)
+registerConvertRoutes(app)
 registerStaticRoutes(app)
 
 // Hono registers ONE error handler (last onError wins), and its default is

@@ -29,7 +29,10 @@ export function describeSample({ humanClicks, targetClicks }: SampleFacts): stri
 }
 
 export interface MeasuredInputs extends SampleFacts {
+  /** Measured downstream events (from POST /api/convert), not typed in. */
   signups: number
+  activated: number
+  paid: number
   /** Unique-human clicks per referring host (only hosts we actually saw). */
   knownSources: Record<string, number>
   /** Unique-human clicks with no referrer — source cannot be determined. */
@@ -53,9 +56,12 @@ export function measuredFacts(m: MeasuredInputs): string[] {
   const facts = [
     `${plural(m.humanClicks, 'unique human click')} of the ${target} needed (${pct(m.humanClicks, target)}% of the pass bar).`,
     m.humanClicks > 0
-      ? `${plural(m.signups, 'signup')} reported — ${pct(m.signups, m.humanClicks)}% of unique humans.`
-      : `${plural(m.signups, 'signup')} reported.`,
+      ? `${plural(m.signups, 'signup')} measured — ${pct(m.signups, m.humanClicks)}% of unique humans.`
+      : `${plural(m.signups, 'signup')} measured.`,
   ]
+  if (m.activated + m.paid > 0) {
+    facts.push(`${plural(m.activated, 'activated developer')} and ${plural(m.paid, 'paying customer')} measured.`)
+  }
   const known = Object.entries(m.knownSources).sort((a, b) => b[1] - a[1])
   const knownTotal = known.reduce((s, [, n]) => s + n, 0)
   if (knownTotal > 0) {

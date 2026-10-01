@@ -12,6 +12,8 @@ import { usersSchema } from './schemas/users-schema'
 import { settingsSchema } from './schemas/admin-schema'
 import {
   clicksSchema,
+  conversionKeysSchema,
+  conversionsSchema,
   experimentsSchema,
   linksSchema,
   signalsSchema,
@@ -26,4 +28,6 @@ export const schemas: CollectionSchema[] = [
   clicksSchema,
   verdictsSchema,
   signalsSchema,
+  conversionsSchema,
+  conversionKeysSchema,
 ]

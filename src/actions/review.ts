@@ -19,6 +19,7 @@ import {
   DECISIONS,
   isUniqueHuman,
   type Click,
+  type Conversion,
   type Decision,
   type Experiment,
   type TrackedLink,
@@ -66,6 +67,8 @@ export interface Evidence {
   clicks: number
   humanClicks: number
   signups: number
+  activated?: number
+  paid?: number
   targetClicks: number
 }
 
@@ -75,12 +78,16 @@ export function buildEvidence(
   links: TrackedLink[],
   clicks: Click[],
   signals: Signal[] = [],
+  conversions: Conversion[] = [],
 ) {
+  const count = (e: Conversion['event']) => conversions.filter((c) => c.event === e).length
   const human = clicks.filter(isUniqueHuman)
   const evidence: Evidence = {
     clicks: clicks.length,
     humanClicks: human.length,
-    signups: exp.signups ?? 0,
+    signups: count('signup'),
+    activated: count('activated'),
+    paid: count('paid'),
     targetClicks: exp.targetClicks ?? 0,
   }
   const perLink = links.map((l) => ({
@@ -97,6 +104,8 @@ export function buildEvidence(
   }
   const measured: MeasuredInputs = {
     ...evidence,
+    activated: evidence.activated ?? 0,
+    paid: evidence.paid ?? 0,
     knownSources,
     unknownSource,
     bots: clicks.filter((c) => c.isBot).length,
@@ -155,7 +164,11 @@ function buildUserPrompt(exp: Experiment, ev: ReturnType<typeof buildEvidence>):
         sample: describeSample(ev.evidence),
         measuredFacts: ev.facts,
         uniqueHumanClicks: ev.evidence.humanClicks,
-        signupsReportedByOwner: ev.evidence.signups,
+        measuredFunnel: {
+          signups: ev.evidence.signups,
+          activated: ev.evidence.activated,
+          paid: ev.evidence.paid,
+        },
         sourceKnown: ev.measured.knownSources,
         sourceUnknown: ev.measured.unknownSource,
         excluded: { bots: ev.measured.bots, repeats: ev.measured.repeats },
@@ -227,7 +240,8 @@ export const reviewExperiment: ActionHandler<Env> = async ({ userId, params, too
   const links = (await queryAll<TrackedLink>(tools, 'links', { experimentId })).map((r) => r.data)
   const clicks = (await queryAll<Click>(tools, 'clicks', { experimentId })).map((r) => r.data)
   const signals = (await queryAll<Signal>(tools, 'signals', { experimentId })).map((r) => r.data)
-  const ev = buildEvidence(exp.data, links, clicks, signals)
+  const conversions = (await queryAll<Conversion>(tools, 'conversions', { experimentId })).map((r) => r.data)
+  const ev = buildEvidence(exp.data, links, clicks, signals, conversions)
 
   const ai: ActionResult<unknown> = await tools.integration('anthropic/chat-completion', {
     model: REVIEW_MODEL,

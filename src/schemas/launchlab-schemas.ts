@@ -56,6 +56,29 @@ export interface Experiment {
   barNotifiedAt?: number
 }
 
+export const CONVERSION_EVENTS = ['signup', 'activated', 'paid'] as const
+export type ConversionEvent = (typeof CONVERSION_EVENTS)[number]
+
+/** A measured downstream event, posted by the product's own backend. Worker-written. */
+export interface Conversion {
+  experimentId: string
+  /** Link code that brought the user in (from utm_campaign), if known. */
+  code: string
+  event: ConversionEvent
+  /** The product's own id for the user, ideally hashed — used only to de-duplicate. */
+  externalId: string
+  /** Unix seconds. */
+  at: number
+}
+
+/** SHA-256 of an experiment's conversion key. The key itself is never stored. */
+export interface ConversionKey {
+  experimentId: string
+  keyHash: string
+  /** Last 4 characters, so the owner can tell keys apart. */
+  hint: string
+}
+
 /** A point-in-time reading of an external attention metric. Worker-written. */
 export interface Signal {
   experimentId: string
@@ -204,4 +227,36 @@ export const verdictsSchema: CollectionSchema = {
   // Approval goes through the `approveVerdict` action (admin-gated), so no
   // client role updates verdicts directly.
   permissions: serverWritten,
+}
+
+export const conversionsSchema: CollectionSchema = {
+  name: 'conversions',
+  columns: [
+    { name: 'experimentId', storage: 'text', interpretation: 'plain' },
+    { name: 'code', storage: 'text', interpretation: 'plain' },
+    { name: 'event', storage: 'text', interpretation: { kind: 'select', options: [...CONVERSION_EVENTS] } },
+    { name: 'externalId', storage: 'text', interpretation: 'plain' },
+    { name: 'at', storage: 'number', interpretation: 'plain' },
+  ],
+  // One signup (or activation, or payment) per user per experiment — enforced
+  // by the room, so a retried or replayed webhook cannot inflate the funnel.
+  uniqueOn: ['experimentId', 'event', 'externalId'],
+  permissions: serverWritten,
+}
+
+export const conversionKeysSchema: CollectionSchema = {
+  name: 'conversion_keys',
+  columns: [
+    { name: 'experimentId', storage: 'text', interpretation: 'plain', required: true, immutable: true },
+    { name: 'keyHash', storage: 'text', interpretation: 'plain', required: true, immutable: true },
+    { name: 'hint', storage: 'text', interpretation: 'plain' },
+  ],
+  uniqueOn: ['keyHash'],
+  // Only the key's creator (and admins) can even see the hash.
+  permissions: {
+    '*': { read: false, create: false, update: false, delete: false },
+    viewer: { read: false, create: false, update: false, delete: false },
+    member: { read: 'own', create: true, update: false, delete: 'own' },
+    admin: { read: true, create: true, update: false, delete: true },
+  },
 }

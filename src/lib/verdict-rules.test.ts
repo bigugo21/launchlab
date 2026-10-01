@@ -38,6 +38,8 @@ describe('measuredFacts', () => {
     humanClicks: 5,
     targetClicks: 50,
     signups: 0,
+    activated: 0,
+    paid: 0,
     knownSources: { 'www.reddit.com': 1 },
     unknownSource: 4,
     bots: 2,
@@ -49,7 +51,7 @@ describe('measuredFacts', () => {
     const facts = measuredFacts(base)
     expect(facts).toEqual([
       '5 unique human clicks of the 50 needed (10% of the pass bar).',
-      '0 signups reported — 0% of unique humans.',
+      '0 signups measured — 0% of unique humans.',
       'Source known for 1 of 5: www.reddit.com (1).',
       '4 clicks had no referrer, so their source is unknown.',
       'Excluded: 2 bot/preview requests and 2 repeat visits.',
@@ -73,9 +75,28 @@ describe('measuredFacts', () => {
     })
     expect(facts).toEqual([
       '0 unique human clicks of the 50 needed (0% of the pass bar).',
-      '0 signups reported.',
+      '0 signups measured.',
       'By link: HN 0 · X 0.',
     ])
+  })
+})
+
+describe('measured funnel', () => {
+  it('reports activation and payment only when they happened', () => {
+    const facts = measuredFacts({
+      humanClicks: 20,
+      targetClicks: 20,
+      signups: 4,
+      activated: 2,
+      paid: 1,
+      knownSources: {},
+      unknownSource: 0,
+      bots: 0,
+      repeats: 0,
+      perLink: [],
+    })
+    expect(facts).toContain('4 signups measured — 20% of unique humans.')
+    expect(facts).toContain('2 activated developers and 1 paying customer measured.')
   })
 })
 

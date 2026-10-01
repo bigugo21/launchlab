@@ -76,7 +76,7 @@ export function VerdictCard({
       </div>
       {ev && (
         <p className="mt-3 text-xs text-muted-foreground">
-          Judged on: {ev.humanClicks} unique humans of {ev.targetClicks} needed · {ev.signups} signups ·{' '}
+          Judged on: {ev.humanClicks} unique humans of {ev.targetClicks} needed · {ev.signups} measured signups ·{' '}
           {ev.clicks} raw clicks
         </p>
       )}
