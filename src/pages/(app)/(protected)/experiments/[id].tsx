@@ -12,8 +12,9 @@ import {
   type Click,
   type Experiment,
   type TrackedLink,
+  isUniqueHuman,
 } from '../../../../schemas/launchlab-schemas'
-import { StatusBadge, channelLabel, makeCode } from '../../../../components/launchlab'
+import { StatusBadge, ViewingNow, channelLabel, makeCode } from '../../../../components/launchlab'
 
 export default function ExperimentPage() {
   const { id = '' } = useParams()
@@ -36,8 +37,9 @@ export default function ExperimentPage() {
   }
 
   const canEdit = exp.createdBy === userId || user?.role === 'admin'
-  const human = clicks.filter((c) => !c.data.isBot)
-  const bots = clicks.length - human.length
+  const human = clicks.filter((c) => isUniqueHuman(c.data))
+  const bots = clicks.filter((c) => c.data.isBot).length
+  const repeats = clicks.filter((c) => !c.data.isBot && c.data.isRepeat).length
   const target = exp.data.targetClicks || 0
 
   return (
@@ -55,10 +57,18 @@ export default function ExperimentPage() {
         </div>
         <StatusBadge status={exp.data.status} />
       </header>
+      <div className="mt-3">
+        <ViewingNow scope={`experiment:${exp.recordId}`} />
+      </div>
 
       <section className="mt-6 grid gap-3 sm:grid-cols-4">
-        <Stat label="Human clicks" value={human.length} hint={`target ${target}`} testId="stat-clicks" />
-        <Stat label="Filtered bots" value={bots} />
+        <Stat label="Unique humans" value={human.length} hint={`target ${target}`} testId="stat-clicks" />
+        <Stat
+          label="Not counted"
+          value={bots + repeats}
+          hint={`${bots} bot${bots === 1 ? '' : 's'} · ${repeats} repeat${repeats === 1 ? '' : 's'}`}
+          testId="stat-not-counted"
+        />
         <Stat label="Signups (reported)" value={exp.data.signups ?? 0} />
         <Stat
           label="Click → signup"
@@ -73,6 +83,8 @@ export default function ExperimentPage() {
       </section>
 
       <LinksPanel experimentId={id} links={links} clicks={clicks} canEdit={canEdit} />
+
+      <RecentClicks clicks={clicks} links={links} />
 
       {canEdit && <OwnerControls exp={exp.data} recordId={exp.recordId} />}
     </div>
@@ -130,14 +142,14 @@ function LinksPanel({
         <ul className="divide-y divide-border">
           {links.map((l) => {
             const url = `${origin}/go/${l.data.code}`
-            const n = clicks.filter((c) => c.data.code === l.data.code && !c.data.isBot).length
+            const n = clicks.filter((c) => c.data.code === l.data.code && isUniqueHuman(c.data)).length
             return (
               <li key={l.recordId} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
                 <span className="min-w-0 flex-1 truncate text-foreground">{l.data.label}</span>
                 <code className="rounded bg-muted px-2 py-0.5 text-xs" data-testid="link-url">
                   {url}
                 </code>
-                <span className="w-20 text-right tabular-nums text-muted-foreground">{n} clicks</span>
+                <span className="w-20 text-right tabular-nums text-muted-foreground">{n} {n === 1 ? 'click' : 'clicks'}</span>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -150,6 +162,46 @@ function LinksPanel({
           })}
         </ul>
       )}
+    </section>
+  )
+}
+
+function RecentClicks({
+  clicks,
+  links,
+}: {
+  clicks: { recordId: string; data: Click }[]
+  links: { data: TrackedLink }[]
+}) {
+  if (clicks.length === 0) return null
+  const labelFor = new Map(links.map((l) => [l.data.code, l.data.label]))
+  const recent = [...clicks].sort((a, b) => b.data.at - a.data.at).slice(0, 10)
+  return (
+    <section className="mt-6 rounded-lg border border-border bg-card">
+      <h2 className="border-b border-border px-5 py-3 text-sm font-semibold text-foreground">
+        Recent clicks <span className="font-normal text-muted-foreground">(live)</span>
+      </h2>
+      <ul className="divide-y divide-border text-sm" data-testid="recent-clicks">
+        {recent.map((c) => (
+          <li key={c.recordId} className="flex flex-wrap items-center gap-3 px-5 py-2">
+            <span className="w-20 tabular-nums text-muted-foreground">
+              {new Date(c.data.at * 1000).toLocaleTimeString()}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-foreground">
+              {labelFor.get(c.data.code) ?? c.data.code}
+            </span>
+            <span className="text-muted-foreground">{c.data.referrerHost || 'direct'}</span>
+            <span className="w-8 text-muted-foreground">{c.data.country || '—'}</span>
+            {c.data.isBot ? (
+              <span className="rounded bg-muted px-1.5 text-xs text-muted-foreground">bot</span>
+            ) : c.data.isRepeat ? (
+              <span className="rounded bg-muted px-1.5 text-xs text-muted-foreground">repeat</span>
+            ) : (
+              <span className="rounded bg-primary/15 px-1.5 text-xs text-primary">human</span>
+            )}
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }

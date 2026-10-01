@@ -1,5 +1,6 @@
 /** Small shared pieces for Launch Lab pages. */
 
+import { getUserColor, usePresenceRoom } from 'deepspace'
 import { cn } from '@/lib/utils'
 import type { Channel, Decision, ExperimentStatus } from '../schemas/launchlab-schemas'
 
@@ -51,6 +52,37 @@ export function DecisionBadge({ decision }: { decision: Decision }) {
     >
       {decision}
     </span>
+  )
+}
+
+/** Teammates looking at the same experiment right now (excludes you). */
+export function ViewingNow({ scope }: { scope: string }) {
+  const { peers, connected } = usePresenceRoom(scope)
+  // One chip per person even if they have the page open in two tabs.
+  const people = [...new Map(peers.map((p) => [p.userId, p])).values()]
+  return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground" data-testid="viewing-now">
+      <span
+        className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-muted-foreground/40')}
+        aria-hidden
+      />
+      {people.length === 0 ? (
+        <span>Only you here</span>
+      ) : (
+        <>
+          <span>Also viewing:</span>
+          {people.map((p) => (
+            <span
+              key={p.userId}
+              className="rounded-full px-2 py-0.5 font-medium text-white"
+              style={{ backgroundColor: getUserColor(p.userId) }}
+            >
+              {p.userName || 'Teammate'}
+            </span>
+          ))}
+        </>
+      )}
+    </div>
   )
 }
 

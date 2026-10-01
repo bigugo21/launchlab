@@ -67,6 +67,13 @@ export interface Click {
   referrerHost: string
   country: string
   isBot: boolean
+  /** Same browser already clicked this link in the last 24h. */
+  isRepeat?: boolean
+}
+
+/** The number that counts: a human's first click on a link. */
+export function isUniqueHuman(c: Click): boolean {
+  return !c.isBot && !c.isRepeat
 }
 
 export interface Verdict {
@@ -139,6 +146,7 @@ export const clicksSchema: CollectionSchema = {
     { name: 'referrerHost', storage: 'text', interpretation: 'plain' },
     { name: 'country', storage: 'text', interpretation: 'plain' },
     { name: 'isBot', storage: 'number', interpretation: { kind: 'boolean' } },
+    { name: 'isRepeat', storage: 'number', interpretation: { kind: 'boolean' } },
   ],
   permissions: serverWritten,
 }

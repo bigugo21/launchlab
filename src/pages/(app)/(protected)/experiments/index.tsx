@@ -11,6 +11,7 @@ import {
   CHANNELS,
   type Click,
   type Experiment,
+  isUniqueHuman,
 } from '../../../../schemas/launchlab-schemas'
 import { StatusBadge, channelLabel } from '../../../../components/launchlab'
 
@@ -34,7 +35,7 @@ export default function ExperimentsPage() {
 
   const clicksByExperiment = new Map<string, number>()
   for (const c of clicks) {
-    if (c.data.isBot) continue
+    if (!isUniqueHuman(c.data)) continue
     clicksByExperiment.set(c.data.experimentId, (clicksByExperiment.get(c.data.experimentId) ?? 0) + 1)
   }
 
@@ -165,7 +166,7 @@ function NewExperimentForm({ onDone }: { onDone: () => void }) {
           ))}
         </select>
       </Field>
-      <Field label="Pass bar (human clicks)">
+      <Field label="Pass bar (unique human clicks)">
         <Input
           type="number"
           min={1}
