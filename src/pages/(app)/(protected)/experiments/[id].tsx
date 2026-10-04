@@ -4,9 +4,9 @@
  */
 
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth, useMutations, useQuery, useUser } from 'deepspace'
-import { Button, Input, Textarea, useToast } from '@/components/ui'
+import { Button, ConfirmModal, Input, Textarea, useToast } from '@/components/ui'
 import {
   EXPERIMENT_STATUSES,
   type Click,
@@ -16,7 +16,7 @@ import {
   isUniqueHuman,
 } from '../../../../schemas/launchlab-schemas'
 import { StatusBadge, ViewingNow, channelLabel, makeCode } from '../../../../components/launchlab'
-import { ReviewPanel } from '../../../../components/verdicts'
+import { ReviewPanel, callAction } from '../../../../components/verdicts'
 import { AttentionPanel } from '../../../../components/signals'
 import { FunnelPanel } from '../../../../components/conversions'
 
@@ -102,7 +102,52 @@ export default function ExperimentPage() {
       <RecentClicks clicks={clicks} links={links} />
 
       {canEdit && <OwnerControls exp={exp.data} recordId={exp.recordId} />}
+
+      {user?.role === 'admin' && <DangerZone experimentId={exp.recordId} title={exp.data.title} />}
     </div>
+  )
+}
+
+/** Admin-only: delete the experiment and everything keyed to it. */
+function DangerZone({ experimentId, title }: { experimentId: string; title: string }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const { error, success } = useToast()
+  const navigate = useNavigate()
+
+  async function confirm() {
+    setBusy(true)
+    try {
+      await callAction('deleteExperiment', { experimentId })
+      success('Experiment deleted', `"${title}" and its links, clicks and verdicts are gone.`)
+      navigate('/experiments')
+    } catch (e) {
+      error('Could not delete', e instanceof Error ? e.message : String(e))
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="mt-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-foreground">Delete experiment</h2>
+        <p className="text-xs text-muted-foreground">
+          Admin only. Permanently removes it with its links, clicks, verdicts, snapshots, conversions and keys.
+        </p>
+      </div>
+      <Button variant="destructive" size="sm" onClick={() => setOpen(true)} data-testid="delete-experiment">
+        Delete…
+      </Button>
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        onConfirm={confirm}
+        loading={busy}
+        title={`Delete "${title}"?`}
+        description="This permanently removes the experiment and all of its links, clicks, verdicts, GitHub snapshots, conversions and conversion keys. It cannot be undone."
+        confirmText="Delete permanently"
+      />
+    </section>
   )
 }
 

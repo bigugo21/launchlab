@@ -3,8 +3,10 @@
  * because (protected)/_layout.tsx already wraps the subtree in <AuthGate>.
  */
 
-import { signOut, useUser } from 'deepspace'
-import { Button } from '@/components/ui'
+import { useState } from 'react'
+import { signOut, useUser, useUsers } from 'deepspace'
+import { Button, ConfirmModal, useToast } from '@/components/ui'
+import { callAction } from '../../../components/verdicts'
 
 export default function SettingsPage() {
   const { user } = useUser()
@@ -35,7 +37,72 @@ export default function SettingsPage() {
             Sign out
           </Button>
         </section>
+
+        {user?.role === 'admin' && <TeamSection selfId={user.id} />}
       </div>
     </div>
+  )
+}
+
+/** Admin-only member list with removal (profile row only — see actions/admin.ts). */
+function TeamSection({ selfId }: { selfId: string }) {
+  const { users, usersLoaded } = useUsers()
+  const [target, setTarget] = useState<{ id: string; label: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const { error, success } = useToast()
+
+  async function confirm() {
+    if (!target) return
+    setBusy(true)
+    try {
+      await callAction('removeMember', { userId: target.id })
+      success('Member removed', `${target.label} no longer has a profile in Launch Lab.`)
+      setTarget(null)
+    } catch (e) {
+      error('Could not remove member', e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="mt-8 rounded-lg border border-border bg-card p-6" data-testid="team-section">
+      <h2 className="text-lg font-semibold">Team</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Admin only. Removing a member deletes their Launch Lab profile; delete their experiments first.
+      </p>
+      {!usersLoaded ? (
+        <div className="mt-4 h-10 animate-pulse rounded-md bg-muted" />
+      ) : (
+        <ul className="mt-4 divide-y divide-border text-sm">
+          {users.map((u) => {
+            const label = u.name || u.email || 'Unnamed member'
+            return (
+              <li key={u.id} className="flex flex-wrap items-center gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-foreground">{label}</div>
+                  {u.email && <div className="truncate text-xs text-muted-foreground">{u.email}</div>}
+                </div>
+                <span className="text-xs capitalize text-muted-foreground">{u.role}</span>
+                {u.id !== selfId && (
+                  <Button size="sm" variant="ghost" onClick={() => setTarget({ id: u.id, label })}>
+                    Remove
+                  </Button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      <ConfirmModal
+        open={!!target}
+        onClose={() => setTarget(null)}
+        onConfirm={confirm}
+        loading={busy}
+        title={`Remove ${target?.label ?? 'member'}?`}
+        description="Their Launch Lab profile is deleted. Their sign-in account itself is not — if they sign in again, a new empty member profile is created."
+        confirmText="Remove member"
+      />
+    </section>
   )
 }

@@ -167,7 +167,7 @@ async function notifyIfBarReached(
     [
       `Your experiment "${title}" just reached ${unique} unique human clicks — its pass bar was ${target}.`,
       '',
-      'Now is a good time to record signups, add notes, and run the AI review so the team can decide whether to expand.',
+      'Now is a good time to check the measured funnel, add notes on what people said, and run the AI review so the team can decide what to do next.',
       '',
       appUrl(env, `/experiments/${experimentId}`),
       '',
