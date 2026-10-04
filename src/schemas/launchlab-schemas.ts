@@ -54,6 +54,8 @@ export interface Experiment {
   githubRepo?: string
   /** Unix seconds when the "target reached" email went out (0/absent = not yet). */
   barNotifiedAt?: number
+  /** Synthetic demo data (Settings → Load sample data). Rendered with a SAMPLE badge. */
+  sample?: boolean
 }
 
 export const CONVERSION_EVENTS = ['signup', 'activated', 'paid'] as const
@@ -110,7 +112,7 @@ export interface Click {
 }
 
 /** The number that counts: a human's first click on a link. */
-export function isUniqueHuman(c: Click): boolean {
+export function isUniqueHuman(c: Pick<Click, 'isBot' | 'isRepeat'>): boolean {
   return !c.isBot && !c.isRepeat
 }
 
@@ -166,6 +168,7 @@ export const experimentsSchema: CollectionSchema = {
     { name: 'notes', storage: 'text', interpretation: 'plain' },
     { name: 'githubRepo', storage: 'text', interpretation: 'plain' },
     { name: 'barNotifiedAt', storage: 'number', interpretation: 'plain' },
+    { name: 'sample', storage: 'number', interpretation: { kind: 'boolean' } },
   ],
   permissions: memberLedger,
 }

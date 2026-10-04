@@ -5,7 +5,7 @@ describe('applyGuardrail', () => {
   it('turns an early STOP into CHANGE (the 5-of-50 case)', () => {
     const r = applyGuardrail('stop', { humanClicks: 5, targetClicks: 50 })
     expect(r.decision).toBe('change')
-    expect(r.note).toMatch(/too few/)
+    expect(r.note).toMatch(/below the minimum sample/)
   })
 
   it('allows STOP once half the bar has arrived', () => {
@@ -27,9 +27,18 @@ describe('applyGuardrail', () => {
     expect(applyGuardrail('change', { humanClicks: 0, targetClicks: 50 }).note).toBe('')
   })
 
-  it('treats a zero/missing target as 1', () => {
+  it('treats a zero/missing target as 1, but still needs the minimum sample', () => {
     expect(applyGuardrail('stop', { humanClicks: 0, targetClicks: 0 }).decision).toBe('change')
-    expect(applyGuardrail('expand', { humanClicks: 1, targetClicks: 0 }).decision).toBe('expand')
+    expect(applyGuardrail('expand', { humanClicks: 1, targetClicks: 0 }).decision).toBe('change')
+    expect(applyGuardrail('expand', { humanClicks: 20, targetClicks: 0 }).decision).toBe('expand')
+  })
+
+  it('never decides on fewer than 20 people, even when a tiny bar is cleared (the live 2-of-2 STOP)', () => {
+    const r = applyGuardrail('stop', { humanClicks: 2, targetClicks: 2 })
+    expect(r.decision).toBe('change')
+    expect(r.note).toMatch(/minimum sample of 20/)
+    expect(applyGuardrail('expand', { humanClicks: 19, targetClicks: 10 }).decision).toBe('change')
+    expect(applyGuardrail('expand', { humanClicks: 20, targetClicks: 10 }).decision).toBe('expand')
   })
 })
 
@@ -114,6 +123,7 @@ describe('github fact', () => {
 describe('describeSample', () => {
   it('tells the model what it may conclude', () => {
     expect(describeSample({ humanClicks: 5, targetClicks: 50 })).toMatch(/only change is allowed/)
+    expect(describeSample({ humanClicks: 2, targetClicks: 2 })).toMatch(/minimum sample is 20/)
     expect(describeSample({ humanClicks: 30, targetClicks: 50 })).toMatch(/not expand/)
     expect(describeSample({ humanClicks: 60, targetClicks: 50 })).toMatch(/bar cleared/)
   })

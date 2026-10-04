@@ -24,7 +24,7 @@ import {
   type Experiment,
   isUniqueHuman,
 } from '../../../../schemas/launchlab-schemas'
-import { StatusBadge, channelLabel } from '../../../../components/launchlab'
+import { SampleBadge, StatusBadge, channelLabel } from '../../../../components/launchlab'
 
 const EMPTY_FORM = {
   title: '',
@@ -86,7 +86,10 @@ export default function ExperimentsPage() {
                   className="flex flex-wrap items-center gap-4 px-4 py-3 hover:bg-muted/40"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-foreground">{e.data.title}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-medium text-foreground">{e.data.title}</span>
+                      {e.data.sample && <SampleBadge />}
+                    </div>
                     <div className="truncate text-xs text-muted-foreground">
                       {channelLabel(e.data.channel)} · {e.data.hypothesis || 'No hypothesis yet'}
                     </div>

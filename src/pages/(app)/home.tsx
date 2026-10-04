@@ -20,7 +20,7 @@ import {
   type ExperimentStatus,
   type Verdict,
 } from '../../schemas/launchlab-schemas'
-import { DecisionBadge, StatusBadge, channelLabel } from '../../components/launchlab'
+import { DecisionBadge, SampleBadge, StatusBadge, channelLabel } from '../../components/launchlab'
 
 interface Row {
   id: string
@@ -31,6 +31,7 @@ interface Row {
   target: number
   signups: number
   decision?: Decision
+  sample?: boolean
 }
 
 const SAMPLE: Row[] = [
@@ -64,6 +65,7 @@ function LiveBoard() {
     target: e.data.targetClicks || 0,
     signups: conversions.filter((c) => c.data.experimentId === e.recordId && c.data.event === 'signup').length,
     decision: verdicts.find((v) => v.data.experimentId === e.recordId)?.data.decision,
+    sample: !!e.data.sample,
   }))
   return <Board rows={rows} />
 }
@@ -128,7 +130,10 @@ function Board({ rows, sample = false }: { rows: Row[]; sample?: boolean }) {
             const inner = (
               <div className="grid items-center gap-x-6 gap-y-2 px-4 py-3 sm:grid-cols-[1fr_11rem_5rem_6rem]">
                 <div className="min-w-0">
-                  <div className="truncate font-medium text-foreground">{r.title}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium text-foreground">{r.title}</span>
+                    {r.sample && <SampleBadge />}
+                  </div>
                   <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                     {r.channel} <StatusBadge status={r.status} />
                   </div>

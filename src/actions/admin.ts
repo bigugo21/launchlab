@@ -12,6 +12,9 @@
 import { resolveAppRole } from 'deepspace/worker'
 import type { ActionHandler, ActionTools } from 'deepspace/worker'
 import type { Env } from '../../worker'
+import { buildSampleLedger } from '../lib/sample-data'
+import { snapshotGithub } from '../server/signals'
+import type { Experiment } from '../schemas/launchlab-schemas'
 
 /** Every collection that stores rows keyed by `experimentId`. */
 const CHILD_COLLECTIONS = ['links', 'clicks', 'verdicts', 'signals', 'conversions', 'conversion_keys'] as const
@@ -34,6 +37,18 @@ async function drain(tools: ActionTools, collection: string, where: Record<strin
   throw new Error(`${collection}: too many rows to delete in one request`)
 }
 
+/**
+ * Children first, so a failure part-way never leaves orphans pointing at a
+ * missing experiment; re-running finishes the job.
+ */
+async function deleteCascade(tools: ActionTools, experimentId: string): Promise<Record<string, number>> {
+  const deleted: Record<string, number> = {}
+  for (const coll of CHILD_COLLECTIONS) deleted[coll] = await drain(tools, coll, { experimentId })
+  const removed = await tools.remove('experiments', experimentId)
+  if (!removed.success) throw new Error(`experiments: ${removed.error}`)
+  return deleted
+}
+
 export const deleteExperiment: ActionHandler<Env> = async ({ userId, params, tools, env }) => {
   const experimentId = typeof params.experimentId === 'string' ? params.experimentId : ''
   if (!experimentId) return { success: false, error: 'experimentId is required' }
@@ -42,16 +57,12 @@ export const deleteExperiment: ActionHandler<Env> = async ({ userId, params, too
   const exp = await tools.get('experiments', experimentId)
   if (!exp.success) return { success: false, error: 'Experiment not found' }
 
-  const deleted: Record<string, number> = {}
+  let deleted: Record<string, number>
   try {
-    // Children first, so a failure part-way never leaves orphans pointing at
-    // a missing experiment; re-running finishes the job.
-    for (const coll of CHILD_COLLECTIONS) deleted[coll] = await drain(tools, coll, { experimentId })
+    deleted = await deleteCascade(tools, experimentId)
   } catch (e) {
     return { success: false, error: `Cleanup stopped part-way (safe to retry): ${e instanceof Error ? e.message : e}` }
   }
-  const removed = await tools.remove('experiments', experimentId)
-  if (!removed.success) return removed
   console.info(`[admin] deleteExperiment exp=${experimentId} by=${userId} ${JSON.stringify(deleted)}`)
   return { success: true, data: { deleted } }
 }
@@ -72,4 +83,61 @@ export const removeMember: ActionHandler<Env> = async ({ userId, params, tools, 
   if (!removed.success) return removed
   console.info(`[admin] removeMember user=${target} by=${userId}`)
   return { success: true, data: { removed: target } }
+}
+
+async function clearSamples(tools: ActionTools): Promise<number> {
+  // `sample` is a 0/1 boolean column; filter in code rather than trust an
+  // equality match on `true` (same reason as the Playbook page).
+  const r = await tools.query('experiments', { limit: 1000 })
+  if (!r.success) throw new Error(r.error)
+  const samples = (r.data.records as unknown as { recordId: string; data: Experiment }[]).filter((e) => e.data.sample)
+  for (const e of samples) await deleteCascade(tools, e.recordId)
+  return samples.length
+}
+
+/** Replace any existing sample ledger with a fresh one. Admin only. */
+export const loadSampleData: ActionHandler<Env> = async ({ userId, tools, env }) => {
+  if (!(await isAdmin(env, userId))) return { success: false, error: 'Only an admin can load sample data' }
+  try {
+    await clearSamples(tools)
+    const ledger = buildSampleLedger()
+    let rows = 0
+    for (const s of ledger) {
+      const exp = await tools.create('experiments', { ...s.experiment })
+      if (!exp.success) throw new Error(`experiment: ${exp.error}`)
+      const experimentId = exp.data.recordId
+      const linkIds = new Map<string, string>()
+      for (const l of s.links) {
+        const r = await tools.create('links', { experimentId, code: l.code, label: l.label })
+        if (!r.success) throw new Error(`link: ${r.error}`)
+        linkIds.set(l.code, r.data.recordId)
+      }
+      for (const c of s.clicks) {
+        const r = await tools.create('clicks', { ...c, experimentId, linkId: linkIds.get(c.code) ?? '' })
+        if (!r.success) throw new Error(`click: ${r.error}`)
+      }
+      for (const c of s.conversions) {
+        const r = await tools.create('conversions', { ...c, experimentId })
+        if (!r.success) throw new Error(`conversion: ${r.error}`)
+      }
+      // The one real number: a genuine GitHub snapshot via the integration.
+      if (s.experiment.githubRepo) await snapshotGithub(tools, experimentId, s.experiment)
+      rows += 1 + s.links.length + s.clicks.length + s.conversions.length
+    }
+    console.info(`[admin] loadSampleData by=${userId} experiments=${ledger.length} rows=${rows}`)
+    return { success: true, data: { experiments: ledger.length, rows } }
+  } catch (e) {
+    return { success: false, error: `Loading stopped part-way (run it again to replace): ${e instanceof Error ? e.message : e}` }
+  }
+}
+
+export const clearSampleData: ActionHandler<Env> = async ({ userId, tools, env }) => {
+  if (!(await isAdmin(env, userId))) return { success: false, error: 'Only an admin can remove sample data' }
+  try {
+    const removed = await clearSamples(tools)
+    console.info(`[admin] clearSampleData by=${userId} experiments=${removed}`)
+    return { success: true, data: { removed } }
+  } catch (e) {
+    return { success: false, error: `Removal stopped part-way (safe to retry): ${e instanceof Error ? e.message : e}` }
+  }
 }

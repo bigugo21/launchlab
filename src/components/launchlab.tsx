@@ -40,6 +40,18 @@ export function DecisionBadge({ decision }: { decision: Decision }) {
   )
 }
 
+/** Marks synthetic demo data everywhere it appears. */
+export function SampleBadge() {
+  return (
+    <span
+      className="rounded border border-info/40 px-1.5 py-px font-mono text-[10px] font-semibold uppercase tracking-wider text-info"
+      title="Synthetic demo data — loaded from Settings, not real traffic"
+    >
+      sample
+    </span>
+  )
+}
+
 /** Teammates looking at the same experiment right now (excludes you). */
 export function ViewingNow({ scope }: { scope: string }) {
   const { peers, connected } = usePresenceRoom(scope)

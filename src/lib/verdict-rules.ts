@@ -2,6 +2,8 @@
  * Decision guardrail — the AI explains, but this code decides what it is
  * allowed to conclude. Kept free of worker imports so it is unit-testable.
  *
+ *   any     STOP or EXPAND needs at least MIN_SAMPLE unique humans, whatever
+ *           pass bar was set — a bar of 2 must not license a decision on 2 people
  *   expand  only if the pass bar was actually cleared
  *   stop    only if at least half the bar's traffic arrived (enough to say
  *           it fell short, not just that it hasn't run long enough)
@@ -15,12 +17,18 @@ export interface SampleFacts {
   targetClicks: number
 }
 
+/** Absolute floor for any STOP/EXPAND decision, independent of the pass bar. */
+export const MIN_SAMPLE = 20
+
 export function minSampleForStop(targetClicks: number): number {
-  return Math.ceil(Math.max(1, targetClicks) / 2)
+  return Math.max(MIN_SAMPLE, Math.ceil(Math.max(1, targetClicks) / 2))
 }
 
 export function describeSample({ humanClicks, targetClicks }: SampleFacts): string {
   const target = Math.max(1, targetClicks)
+  if (humanClicks < MIN_SAMPLE) {
+    return `too few people to decide anything (${humanClicks}/${target}, minimum sample is ${MIN_SAMPLE}) — only change is allowed`
+  }
   if (humanClicks >= target) return `bar cleared (${humanClicks}/${target}) — expand or stop are both allowed`
   if (humanClicks >= minSampleForStop(target)) {
     return `enough traffic to judge (${humanClicks}/${target}) but bar not cleared — stop or change allowed, not expand`
@@ -93,6 +101,12 @@ export function applyGuardrail(
   { humanClicks, targetClicks }: SampleFacts,
 ): { decision: Decision; note: string } {
   const target = Math.max(1, targetClicks)
+  if (proposed !== 'change' && humanClicks < MIN_SAMPLE) {
+    return {
+      decision: 'change',
+      note: `AI proposed ${proposed.toUpperCase()}, but ${humanClicks} unique human${humanClicks === 1 ? '' : 's'} is below the minimum sample of ${MIN_SAMPLE} for any decision. Keep testing.`,
+    }
+  }
   if (proposed === 'expand' && humanClicks < target) {
     return {
       decision: 'change',
@@ -103,7 +117,7 @@ export function applyGuardrail(
   if (proposed === 'stop' && humanClicks < min) {
     return {
       decision: 'change',
-      note: `AI proposed STOP, but ${humanClicks} unique humans is too few to call it (need ${min}, half the bar). Keep testing.`,
+      note: `AI proposed STOP, but ${humanClicks} unique humans is too few to call it (need ${min}: half the bar, and at least ${MIN_SAMPLE}). Keep testing.`,
     }
   }
   return { decision: proposed, note: '' }

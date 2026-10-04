@@ -15,7 +15,7 @@ import {
   type TrackedLink,
   isUniqueHuman,
 } from '../../../../schemas/launchlab-schemas'
-import { StatusBadge, ViewingNow, channelLabel, makeCode } from '../../../../components/launchlab'
+import { SampleBadge, StatusBadge, ViewingNow, channelLabel, makeCode } from '../../../../components/launchlab'
 import { ReviewPanel, callAction } from '../../../../components/verdicts'
 import { AttentionPanel } from '../../../../components/signals'
 import { FunnelPanel } from '../../../../components/conversions'
@@ -55,7 +55,9 @@ export default function ExperimentPage() {
       </Link>
       <header className="mt-2 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-foreground">{exp.data.title}</h1>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold text-foreground">
+            {exp.data.title} {exp.data.sample && <SampleBadge />}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {channelLabel(exp.data.channel)} · sends to{' '}
             <span className="break-all">{exp.data.destinationUrl}</span>
@@ -66,6 +68,12 @@ export default function ExperimentPage() {
       <div className="mt-3">
         <ViewingNow scope={`experiment:${exp.recordId}`} />
       </div>
+      {exp.data.sample && (
+        <p className="mt-4 rounded-md border border-info/40 bg-info/10 px-3 py-2 text-xs text-foreground" data-testid="sample-banner">
+          <span className="font-semibold">Sample data.</span> Clicks, signups and notes here are synthetic, loaded to
+          show how the ledger works. The GitHub snapshot is real, and any AI verdict is a real review of these numbers.
+        </p>
+      )}
 
       <section className="mt-6 grid gap-3 sm:grid-cols-4">
         <Stat label="Unique humans" value={human.length} hint={`target ${target}`} testId="stat-clicks" />

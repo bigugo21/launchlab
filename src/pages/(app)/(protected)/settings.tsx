@@ -39,6 +39,7 @@ export default function SettingsPage() {
         </section>
 
         {user?.role === 'admin' && <TeamSection selfId={user.id} />}
+        {user?.role === 'admin' && <SampleDataSection />}
       </div>
     </div>
   )
@@ -102,6 +103,58 @@ function TeamSection({ selfId }: { selfId: string }) {
         title={`Remove ${target?.label ?? 'member'}?`}
         description="Their Launch Lab profile is deleted. Their sign-in account itself is not — if they sign in again, a new empty member profile is created."
         confirmText="Remove member"
+      />
+    </section>
+  )
+}
+
+/** Admin-only: load or remove the clearly-labelled sample ledger. */
+function SampleDataSection() {
+  const [busy, setBusy] = useState<'load' | 'clear' | null>(null)
+  const [confirmClear, setConfirmClear] = useState(false)
+  const { error, success } = useToast()
+
+  async function run(kind: 'load' | 'clear') {
+    setBusy(kind)
+    try {
+      if (kind === 'load') {
+        await callAction('loadSampleData', {})
+        success('Sample data loaded', 'Three SAMPLE experiments are on the Lab board. Run the AI review on each.')
+      } else {
+        await callAction('clearSampleData', {})
+        success('Sample data removed')
+        setConfirmClear(false)
+      }
+    } catch (e) {
+      error(kind === 'load' ? 'Could not load sample data' : 'Could not remove sample data', e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <section className="mt-8 rounded-lg border border-border bg-card p-6" data-testid="sample-section">
+      <h2 className="text-lg font-semibold">Sample data</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Admin only. Loads three experiments with synthetic clicks and signups, each marked SAMPLE, so a new visitor sees
+        a working ledger. Loading again replaces them. Real experiments are never touched.
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => run('load')} loading={busy === 'load'} disabled={busy !== null} data-testid="load-sample">
+          Load sample data
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setConfirmClear(true)} disabled={busy !== null}>
+          Remove sample data
+        </Button>
+      </div>
+      <ConfirmModal
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        onConfirm={() => run('clear')}
+        loading={busy === 'clear'}
+        title="Remove all sample experiments?"
+        description="Deletes every experiment marked SAMPLE with its links, clicks, conversions, snapshots and verdicts. Real experiments are not affected."
+        confirmText="Remove sample data"
       />
     </section>
   )
