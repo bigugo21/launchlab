@@ -78,8 +78,8 @@ export function measuredFacts(m: MeasuredInputs): string[] {
     const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
     facts.push(
       g.snapshots > 1
-        ? `GitHub ${g.subject}: ${sign(g.stars)} stars and ${sign(g.forks)} forks since the first snapshot (now ${g.starsNow} stars, ${g.forksNow} forks).`
-        : `GitHub ${g.subject}: one snapshot so far (${g.starsNow} stars, ${g.forksNow} forks) — no change measured yet.`,
+        ? `GitHub ${g.subject}: ${sign(g.stars)} stars and ${sign(g.forks)} forks since the first snapshot (now ${plural(g.starsNow, 'star')}, ${plural(g.forksNow, 'fork')}).`
+        : `GitHub ${g.subject}: one snapshot so far (${plural(g.starsNow, 'star')}, ${plural(g.forksNow, 'fork')}) — no change measured yet.`,
     )
   }
   if (m.perLink.length > 1) {

@@ -100,6 +100,17 @@ describe('measured funnel', () => {
   })
 })
 
+describe('github fact', () => {
+  it('pluralises counts correctly', () => {
+    const facts = measuredFacts({
+      humanClicks: 2, targetClicks: 2, signups: 0, activated: 0, paid: 0,
+      knownSources: {}, unknownSource: 2, bots: 0, repeats: 0, perLink: [],
+      github: { subject: 'o/r', stars: 0, forks: 0, starsNow: 7, forksNow: 1, snapshots: 1 },
+    })
+    expect(facts.at(-1)).toBe('GitHub o/r: one snapshot so far (7 stars, 1 fork) — no change measured yet.')
+  })
+})
+
 describe('describeSample', () => {
   it('tells the model what it may conclude', () => {
     expect(describeSample({ humanClicks: 5, targetClicks: 50 })).toMatch(/only change is allowed/)
