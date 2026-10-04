@@ -47,10 +47,10 @@ export default function Landing() {
           </Link>
         </header>
 
-        <main className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-8 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
+        <main className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-4 pb-20 pt-8 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:pt-16">
           <section>
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary">GTM experiment ledger</p>
-            <h1 className="mt-4 text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+            <h1 className="mt-4 break-words text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
               Every launch, judged by evidence.
             </h1>
             <p className="mt-6 max-w-md text-base text-muted-foreground">
