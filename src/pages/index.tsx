@@ -72,7 +72,7 @@ export default function Landing() {
         </main>
 
         <section className="border-t border-border bg-card">
-          <ol className="mx-auto grid max-w-6xl px-4 sm:px-6 md:grid-cols-[auto_1fr]">
+          <ol className="mx-auto max-w-6xl divide-y divide-border px-4 sm:px-6">
             <LedgerRow n="01" term="Measured">
               Bots, link previews and repeat visits are excluded before a click counts. Signups arrive
               from your backend, never typed in.
@@ -101,12 +101,12 @@ export default function Landing() {
 
 function LedgerRow({ n, term, children }: { n: string; term: string; children: React.ReactNode }) {
   return (
-    <li className="contents">
-      <div className="flex items-baseline gap-4 border-b border-border py-6 pr-10 md:last-of-type:border-b-0">
+    <li className="grid gap-2 py-6 md:grid-cols-[12rem_1fr] md:gap-8">
+      <div className="flex items-baseline gap-4">
         <span className="font-mono text-xs text-muted-foreground">{n}</span>
         <span className="text-lg font-semibold">{term}</span>
       </div>
-      <p className="border-b border-border py-6 text-sm text-muted-foreground md:pt-7">{children}</p>
+      <p className="text-sm text-muted-foreground md:pt-1">{children}</p>
     </li>
   )
 }
