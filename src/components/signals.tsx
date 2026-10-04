@@ -119,7 +119,7 @@ function Metric({ label, now, delta }: { label: string; now: number; delta: numb
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
         {now}{' '}
-        <span className={delta > 0 ? 'text-sm text-emerald-500' : 'text-sm text-muted-foreground'}>
+        <span className={delta > 0 ? 'text-sm text-success' : 'text-sm text-muted-foreground'}>
           {delta >= 0 ? `+${delta}` : delta} since start
         </span>
       </div>

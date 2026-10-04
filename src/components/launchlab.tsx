@@ -9,7 +9,7 @@ export { channelLabel } from '../lib/channels'
 const STATUS_STYLES: Record<ExperimentStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
   running: 'bg-primary/15 text-primary',
-  closed: 'bg-foreground/10 text-foreground',
+  closed: 'bg-secondary text-secondary-foreground',
 }
 
 export function StatusBadge({ status }: { status: ExperimentStatus | undefined }) {
@@ -22,9 +22,9 @@ export function StatusBadge({ status }: { status: ExperimentStatus | undefined }
 }
 
 const DECISION_STYLES: Record<Decision, string> = {
-  expand: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-  change: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-  stop: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+  expand: 'bg-success/15 text-success',
+  change: 'bg-warning/15 text-warning',
+  stop: 'bg-destructive/15 text-destructive',
 }
 
 export function DecisionBadge({ decision }: { decision: Decision }) {
@@ -48,7 +48,7 @@ export function ViewingNow({ scope }: { scope: string }) {
   return (
     <div className="flex items-center gap-2 text-xs text-muted-foreground" data-testid="viewing-now">
       <span
-        className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-muted-foreground/40')}
+        className={cn('h-2 w-2 rounded-full', connected ? 'bg-success' : 'bg-border')}
         aria-hidden
       />
       {people.length === 0 ? (

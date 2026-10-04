@@ -149,7 +149,7 @@ function KeySetup({ experimentId, linkCode }: { experimentId: string; linkCode?:
         </div>
       </div>
       {shownKey && (
-        <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+        <div className="mt-3 rounded-md border border-warning/40 bg-warning/10 p-3">
           <p className="text-xs font-medium text-foreground">
             Copy this key now — it will not be shown again.
           </p>

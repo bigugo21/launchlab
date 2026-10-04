@@ -52,14 +52,14 @@ export function VerdictCard({
         <DecisionBadge decision={verdict.decision} />
         {title && <div className="min-w-0 flex-1 font-medium text-foreground">{title}</div>}
         {verdict.approved ? (
-          <span className="text-xs text-emerald-600 dark:text-emerald-400">✓ In playbook</span>
+          <span className="text-xs font-medium text-success">✓ In playbook</span>
         ) : (
           <span className="text-xs text-muted-foreground">Awaiting admin approval</span>
         )}
       </div>
       {verdict.guardrailNote && (
         <p
-          className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-foreground"
+          className="mt-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground"
           data-testid="guardrail-note"
         >
           <span className="font-semibold">Rule applied:</span> {verdict.guardrailNote}
@@ -113,7 +113,7 @@ function ClaimList({
         <ul className="space-y-1 text-sm text-foreground">
           {items.map((t, i) => (
             <li key={i} className="flex gap-2">
-              <span className={tone === 'proven' ? 'text-emerald-500' : 'text-amber-500'} aria-hidden>
+              <span className={tone === 'proven' ? 'text-success' : 'text-warning'} aria-hidden>
                 {tone === 'proven' ? '✓' : '?'}
               </span>
               <span>{t}</span>

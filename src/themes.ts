@@ -18,6 +18,11 @@
 
 export const THEMES = [
   {
+    id: 'notebook',
+    label: 'Notebook',
+    description: "Launch Lab's theme: warm paper, ink, one signal-orange accent.",
+  },
+  {
     id: 'slate',
     label: 'Slate',
     description: 'Neutral dark placeholder default. Replace with your own theme.',

@@ -6,7 +6,18 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutations, useQuery } from 'deepspace'
-import { Button, Input, Label, Textarea, useToast } from '@/components/ui'
+import {
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+  useToast,
+} from '@/components/ui'
 import {
   CHANNELS,
   type Click,
@@ -156,17 +167,18 @@ function NewExperimentForm({ onDone }: { onDone: () => void }) {
         />
       </Field>
       <Field label="Channel">
-        <select
-          value={form.channel}
-          onChange={(e) => set('channel')(e.target.value)}
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-        >
-          {CHANNELS.map((c) => (
-            <option key={c} value={c}>
-              {channelLabel(c)}
-            </option>
-          ))}
-        </select>
+        <Select value={form.channel} onValueChange={set('channel')}>
+          <SelectTrigger className="w-full" aria-label="Channel">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CHANNELS.map((c) => (
+              <SelectItem key={c} value={c}>
+                {channelLabel(c)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Field>
       <Field label="Pass bar (unique human clicks)">
         <Input

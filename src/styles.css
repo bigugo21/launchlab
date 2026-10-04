@@ -17,6 +17,8 @@
  * they stay consistent across every preset.
  */
 @theme {
+  --font-sans: 'IBM Plex Sans', 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
   /* shadcn core tokens — slate (default): neutral gray on near-black, indigo accent */
   --color-background: #0a0a0a;
   --color-foreground: #e8eaed;
@@ -164,7 +166,7 @@
   }
 
   body {
-    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'IBM Plex Sans', 'Segoe UI', Roboto, sans-serif;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -231,4 +233,35 @@
   a, button, [role="button"], input, select, textarea {
     touch-action: manipulation;
   }
+}
+
+/* ── Landing ledger card ─────────────────────────────────────────────────
+ * One-shot entrance motion. Everything is a
+ * flourish on top of a final state that is already in the HTML, and all of
+ * it is switched off for prefers-reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .ledger-row {
+    opacity: 0;
+    animation: ledger-row-in 0.35s ease-out forwards;
+  }
+  .ledger-count {
+    animation: ledger-settle 0.9s steps(6, end) both;
+  }
+  .ledger-stamp {
+    opacity: 0;
+    transform: rotate(-8deg) scale(1.6);
+    animation: ledger-stamp 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2) 1.6s forwards;
+  }
+}
+
+@keyframes ledger-row-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ledger-settle {
+  from { opacity: 0.25; filter: blur(2px); }
+  to { opacity: 1; filter: none; }
+}
+@keyframes ledger-stamp {
+  to { opacity: 1; transform: rotate(-4deg) scale(1); }
 }

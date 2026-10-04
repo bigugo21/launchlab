@@ -1,5 +1,5 @@
-/** App name — replaced by the CLI during scaffolding */
-export const APP_NAME = 'launchlab'
+/** Display name. The app.space subdomain comes from APP_NAME in wrangler.toml, not this. */
+export const APP_NAME = 'Launch Lab'
 
 /** Immutable app identity — data scope keys to this, so renames never
  *  strand your records.
